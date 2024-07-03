@@ -1,0 +1,68 @@
+using Unity.VisualScripting;
+using UnityEngine;
+
+public class SpikeHead : EnemyDamage
+{
+    [Header("Spikehead Attributes")]
+    [SerializeField] private float speed;
+    [SerializeField] private float range;
+    [SerializeField] private float checkDelay;
+    [SerializeField] private LayerMask playerLayer;
+    private Vector3[] directions = new Vector3[4];
+    private Vector3 destination;
+    private float checkTimer;
+    private bool attacking;
+
+    [Header("SFX")]
+    [SerializeField] private AudioClip impactSound;
+
+
+    private void Update(){
+        if (attacking) //Move spikehead to destination only if attacking
+            transform.Translate(destination * Time.deltaTime*speed);
+        else{
+            checkTimer+= Time.deltaTime;
+            if (checkTimer > checkDelay)
+                CheckForPlayer();            
+        }
+    }
+    private void OnEnable(){
+        Stop();
+    }
+
+    private void CheckForPlayer(){
+        CalculateDirections();
+
+        // Check if player is in range
+
+        for (int i = 0; i < directions.Length; i++)
+        {
+            Debug.DrawRay(transform.position, directions[i], Color.red);
+            RaycastHit2D hit = Physics2D.Raycast(transform.position, directions[i], range, playerLayer);
+
+            if (hit.collider != null && !attacking){
+                attacking = true;
+                destination = directions[i];
+                checkTimer = 0;
+            }
+        }
+    }
+    private void CalculateDirections(){
+        directions[0] = transform.right * range; //Right
+        directions[1] = -transform.right * range; //Left
+        directions[2] = transform.up * range; //Up
+        directions[3] = -transform.up * range; //Down
+    }
+
+    private void Stop(){
+        destination = transform.position; //Set destination as the current position so he doesn't move
+        attacking = false;
+    }
+
+    new private void OnTriggerEnter2D(Collider2D collision){
+        SoundManager.instance.PlaySound(impactSound);
+        base.OnTriggerEnter2D(collision);
+        if(collision.tag != "Enemy")
+        Stop(); //Stop spikehead once he hits something;
+    }
+}
